@@ -1,4 +1,8 @@
 name: Market Open
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   schedule:
     - cron: '30 13 * * 1-5'   # ~9:30 ET
