@@ -1,9 +1,9 @@
 import sys
 import random
-import pandas as pd
-import yfinance as yf
 import requests
+import yfinance as yf
 import os
+from bs4 import BeautifulSoup
 
 period = sys.argv[1] if len(sys.argv) > 1 else "Market Update"
 
@@ -20,11 +20,24 @@ def send_groupme_message(text):
     except Exception as e:
         print(f"❌ Request failed: {e}")
 
-# === Stock selection using all free yfinance data + 1:5 RR ===
-def get_candidates():
+# === Get S&P 500 tickers without pandas/lxml ===
+def get_sp500_tickers():
     url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
-    df = pd.read_html(url)[0]
-    tickers = df["Symbol"].tolist()[:200]
+    headers = {"User-Agent": "Mozilla/5.0"}
+    resp = requests.get(url, headers=headers)
+    soup = BeautifulSoup(resp.text, "html.parser")
+    table = soup.find("table", {"class": "wikitable"})
+    tickers = []
+    for row in table.find_all("tr")[1:]:  # skip header
+        cols = row.find_all("td")
+        if len(cols) > 0:
+            ticker = cols[0].text.strip()
+            tickers.append(ticker)
+    return tickers[:200]  # limit for speed
+
+# === Stock selection ===
+def get_candidates():
+    tickers = get_sp500_tickers()
     extra = ["AMC", "GME", "RIVN", "SOFI", "PLTR", "COIN"]
     tickers = list(dict.fromkeys(tickers + extra))
 
@@ -70,23 +83,21 @@ if not candidates:
     send_groupme_message(msg)
     sys.exit(0)
 
-# Split low-risk vs high-risk/reward
 low_risk = [c for c in candidates if c["market_cap"] > 100_000_000_000 and c["beta"] < 1.2]
 high_risk = [c for c in candidates if c["market_cap"] < 100_000_000_000 or c["beta"] > 1.5]
 
 low_pick = max(low_risk, key=lambda x: x["rr"]) if low_risk else max(candidates, key=lambda x: x["rr"])
 high_pick = max(high_risk, key=lambda x: x["rr"]) if high_risk else random.choice(candidates)
 
-# === Global events / market context (uses all available free data) ===
+# Global market context
 try:
     market = yf.Ticker("SPY")
     global_news = market.news[:3]
-    context_lines = [f"- {item['title']}" for item in global_news]
+    context_lines = [f"- {item.get('title', '')}" for item in global_news]
     context = "\n".join(context_lines)
 except:
     context = "Market news temporarily unavailable"
 
-# Build the final message
 msg = f"""{period} – 1:5 RR Picks
 
 🌍 Global Market Context:
