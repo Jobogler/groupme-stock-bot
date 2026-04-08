@@ -1,4 +1,8 @@
 name: Market Close
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   schedule:
     - cron: '0 21 * * 1-5'   # ~4:00 ET
