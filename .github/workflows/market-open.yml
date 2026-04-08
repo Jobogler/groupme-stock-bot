@@ -1,0 +1,19 @@
+name: Market Open
+on:
+  schedule:
+    - cron: '30 13 * * 1-5'   # ~9:30 ET
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install yfinance pandas requests
+      - name: Run bot
+        env:
+          GROUPME_BOT_ID: ${{ secrets.GROUPME_BOT_ID }}
+        run: python bot.py "Market Open"
