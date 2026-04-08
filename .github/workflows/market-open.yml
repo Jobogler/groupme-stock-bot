@@ -5,18 +5,27 @@ env:
 
 on:
   schedule:
-    - cron: '30 13 * * 1-5'   # ~9:30 ET
+    - cron: '30 13 * * 1-5'
   workflow_dispatch:
 
 jobs:
   run:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install yfinance pandas requests
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install yfinance pandas requests
+
       - name: Run bot
         env:
           GROUPME_BOT_ID: ${{ secrets.GROUPME_BOT_ID }}
