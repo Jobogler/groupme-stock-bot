@@ -1,7 +1,8 @@
 name: Market Midday
+
 on:
   schedule:
-    - cron: '0 17 * * 1-5'   # ~12:00 ET
+    - cron: '0 17 * * 1-5'    # Runs ~12:00 PM ET (UTC time)
   workflow_dispatch:
 
 jobs:
@@ -9,10 +10,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install yfinance pandas requests
+      
+      - name: Install dependencies
+        run: pip install yfinance requests beautifulsoup4
+      
       - name: Run bot
         env:
           GROUPME_BOT_ID: ${{ secrets.GROUPME_BOT_ID }}
