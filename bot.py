@@ -20,7 +20,7 @@ def send_groupme_message(text):
     except Exception as e:
         print(f"❌ Request failed: {e}")
 
-# === Get S&P 500 tickers without pandas/lxml ===
+# Get S&P 500 tickers
 def get_sp500_tickers():
     url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
     headers = {"User-Agent": "Mozilla/5.0"}
@@ -28,14 +28,14 @@ def get_sp500_tickers():
     soup = BeautifulSoup(resp.text, "html.parser")
     table = soup.find("table", {"class": "wikitable"})
     tickers = []
-    for row in table.find_all("tr")[1:]:  # skip header
+    for row in table.find_all("tr")[1:]:
         cols = row.find_all("td")
         if len(cols) > 0:
             ticker = cols[0].text.strip()
             tickers.append(ticker)
-    return tickers[:200]  # limit for speed
+    return tickers[:200]
 
-# === Stock selection ===
+# Stock selection
 def get_candidates():
     tickers = get_sp500_tickers()
     extra = ["AMC", "GME", "RIVN", "SOFI", "PLTR", "COIN"]
@@ -98,6 +98,29 @@ try:
 except:
     context = "Market news temporarily unavailable"
 
+# === Generate simple reasoning ===
+def get_reasoning(pick, risk_type):
+    rr_text = f"strong 1:{pick['rr']} upside-to-downside potential based on 52-week range"
+    
+    if risk_type == "low":
+        base = f"Selected as low-risk due to large market cap and low beta ({pick['beta']:.2f})."
+    else:
+        base = f"Selected as high-risk/reward due to smaller market cap or high beta ({pick['beta']:.2f})."
+    
+    # Tie in global context if relevant (simple keyword check)
+    context_lower = context.lower()
+    event_mention = ""
+    if any(word in context_lower for word in ["ceasefire", "iran", "oil", "hormuz", "trump"]):
+        event_mention = " This pick may benefit from recent geopolitical relief (oil price easing / risk-on sentiment)."
+    elif "fed" in context_lower or "rate" in context_lower:
+        event_mention = " Benefits from current monetary policy expectations."
+    
+    return f"{base} {rr_text}.{event_mention}"
+
+low_reason = get_reasoning(low_pick, "low")
+high_reason = get_reasoning(high_pick, "high")
+
+# Final message
 msg = f"""{period} – 1:5 RR Picks
 
 🌍 Global Market Context:
@@ -107,11 +130,15 @@ msg = f"""{period} – 1:5 RR Picks
 {low_pick['name']} ({low_pick['ticker']})
 ${low_pick['price']} • Upside {low_pick['upside_pct']}% • RR 1:{low_pick['rr']}
 
+Reason: {low_reason}
+
 🔴 High Risk / Reward
 {high_pick['name']} ({high_pick['ticker']})
 ${high_pick['price']} • Upside {high_pick['upside_pct']}% • RR 1:{high_pick['rr']}
 
+Reason: {high_reason}
+
 this is just a suggestion use at your own risk"""
 
 send_groupme_message(msg)
-print(f"✅ Sent {period} message")
+print(f"✅ Sent {period} message with reasoning")
